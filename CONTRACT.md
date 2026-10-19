@@ -1,3 +1,5 @@
+> **Update: the app is now a single Next.js project.** Route handlers live in `app/api/**` (same URLs/JSON as below), pages in `app/`, components in `components/`, shared server code in `lib/` (db, upload streaming, Range media). The Express/Vite layout described below is historical; the API contract itself is unchanged. Data: `data/db.json`, uploads: `uploads/`.
+
 # VideoReview contract (shared by all agents)
 
 Server: Express on :4000 (ESM). Client: Vite+React on :5173 proxying /api -> :4000.

@@ -1,9 +1,6 @@
 node_modules
-.next
+.next*
 /data/*.json
 /uploads/*
 !/uploads/.gitkeep
-/server/uploads/*
-/server/data/*.json
-/client/dist
-.next*
+*.log
