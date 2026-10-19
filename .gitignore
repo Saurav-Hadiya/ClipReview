@@ -1,5 +1,9 @@
 node_modules
-server/uploads/*
-!server/uploads/.gitkeep
-server/data/*.json
-client/dist
+.next
+/data/*.json
+/uploads/*
+!/uploads/.gitkeep
+/server/uploads/*
+/server/data/*.json
+/client/dist
+.next*

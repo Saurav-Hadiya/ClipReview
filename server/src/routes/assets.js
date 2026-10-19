@@ -6,7 +6,7 @@ import crypto from 'node:crypto';
 import { db, newId, now, save, findVersion, sendVideo, UPLOAD_DIR } from '../db.js';
 
 const router = Router();
-const STATUSES = ['in_review', 'approved', 'needs_changes'];
+const STATUSES = ['needs_review', 'in_progress', 'approved'];
 const MAX_SIZE = 2 * 1024 * 1024 * 1024;
 
 const storage = multer.diskStorage({
@@ -58,7 +58,7 @@ router.post('/assets', uploadMiddleware, (req, res) => {
   const asset = {
     id: newId(),
     name,
-    status: 'in_review',
+    status: 'needs_review',
     createdAt: t,
     versions: [{
       id: newId(),
@@ -106,6 +106,7 @@ router.delete('/assets/:id', (req, res) => {
   asset.versions.forEach((v) => removeFile(v.filename));
   db.comments = db.comments.filter((c) => c.assetId !== asset.id);
   db.shares = db.shares.filter((s) => s.assetId !== asset.id);
+  db.activity = db.activity.filter((x) => x.assetId !== asset.id);
   save();
   res.status(204).end();
 });

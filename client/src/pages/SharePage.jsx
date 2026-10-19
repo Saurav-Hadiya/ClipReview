@@ -7,13 +7,19 @@ import VersionSwitcher from '../components/VersionSwitcher.jsx';
 
 export default function SharePage() {
   const { token } = useParams();
-  const [state, setState] = useState('loading'); // loading | ok | passphrase | expired | notfound | error
+  // loading | ok | passphrase | expired | disabled | notfound | error
+  const [state, setState] = useState('loading');
   const [data, setData] = useState(null);
   const [versionId, setVersionId] = useState('');
   const [passphrase, setPassphrase] = useState(''); // in-memory only
   const [input, setInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
+  const [identity, setIdentity] = useState(null); // {name,email} component state only
+  const [gate, setGate] = useState(null); // pending comment payload awaiting identity
+  const [gateName, setGateName] = useState('');
+  const [gateEmail, setGateEmail] = useState('');
+  const [gateError, setGateError] = useState('');
   const seekRef = useRef(null);
 
   const headers = useCallback(
@@ -38,6 +44,7 @@ export default function SharePage() {
         setAuthError(e.data?.error === 'bad_passphrase' ? 'Incorrect passphrase' : '');
         setState('passphrase');
       } else if (e.status === 410) setState('expired');
+      else if (e.status === 403 && e.data?.error === 'disabled') setState('disabled');
       else if (e.status === 404) setState('notfound');
       else setState('error');
     }
@@ -47,6 +54,7 @@ export default function SharePage() {
 
   if (state === 'loading') return <div className="sp-msg">Loading{'…'}</div>;
   if (state === 'expired') return <div className="sp-msg"><h2>Link expired</h2><p>This share link is no longer valid.</p></div>;
+  if (state === 'disabled') return <div className="sp-msg"><h2>Link disabled</h2><p>The owner has turned this share link off.</p></div>;
   if (state === 'notfound') return <div className="sp-msg"><h2>Not found</h2><p>This share link does not exist or was revoked.</p></div>;
   if (state === 'error') return <div className="sp-msg"><h2>Something went wrong</h2></div>;
 
@@ -68,25 +76,70 @@ export default function SharePage() {
   const src = base + q;
   const downloadUrl = `${base}?download=1${passphrase ? `&p=${encodeURIComponent(passphrase)}` : ''}`;
   const visible = comments.filter((c) => c.versionId === versionId);
+  const showSwitcher = share.showAllVersions !== false && asset.versions.length > 0;
+  const theme = share.theme || 'dark';
+  const style = share.accentColor ? { '--accent': share.accentColor } : undefined;
 
-  const onAdd = async ({ time, endTime, text, author }) => {
+  const post = async (payload, who) => {
     const c = await api.post(
       `/api/public/shares/${token}/comments`,
-      { versionId, time, endTime, text, author: author || 'Guest' },
+      {
+        versionId,
+        time: payload.time,
+        endTime: payload.endTime,
+        durationFrames: payload.durationFrames,
+        frame: payload.frame,
+        anchor: payload.anchor,
+        parentId: payload.parentId,
+        text: payload.text,
+        authorName: who.name,
+        authorEmail: who.email,
+      },
       headers(passphrase),
     );
     setData((d) => ({ ...d, comments: [...d.comments, c] }));
   };
 
+  const onAdd = async (payload) => {
+    if (!identity) {
+      setGate(payload);
+      return;
+    }
+    await post(payload, identity);
+  };
+
+  const submitGate = async (e) => {
+    e.preventDefault();
+    const name = gateName.trim();
+    const email = gateEmail.trim();
+    if (!name || !/^[^\s@]+@[^\s@]+$/.test(email)) {
+      setGateError('Enter your name and a valid email to comment.');
+      return;
+    }
+    const who = { name, email };
+    try {
+      await post(gate, who);
+      setIdentity(who);
+      setGate(null);
+      setGateError('');
+    } catch (err) {
+      setGateError(err.message || 'Could not post comment');
+    }
+  };
+
   return (
-    <div className="sp">
+    <div className={`sp sp-theme-${theme}`} style={style}>
       <div className="sp-head">
-        <h2>{asset.name}</h2>
-        <VersionSwitcher versions={asset.versions} value={versionId} onChange={setVersionId} />
+        <div className="sp-title">
+          <h2>{share.name || asset.name}</h2>
+          {share.name && <span className="sp-sub">{asset.name}</span>}
+        </div>
+        {showSwitcher && <VersionSwitcher versions={asset.versions} value={versionId} onChange={setVersionId} />}
         {share.allowDownload && version && (
           <a className="btn" href={downloadUrl} download>Download</a>
         )}
       </div>
+      {share.description && <p className="sp-desc">{share.description}</p>}
       <div className="sp-body">
         <div className="sp-player">
           {version && (
@@ -103,9 +156,29 @@ export default function SharePage() {
             onToggleResolved={() => {}}
             onDelete={() => {}}
             readOnly={!share.allowComments}
+            showInternalToggle={false}
           />
         </div>
       </div>
+      {gate && (
+        <div className="sd-overlay">
+          <form className="sd sp-gate" onSubmit={submitGate} role="dialog" aria-modal="true" aria-label="Your details">
+            <strong>Before you comment</strong>
+            <p className="sd-empty">Tell us who you are so the owner knows who left this feedback.</p>
+            <label>Name
+              <input type="text" autoFocus value={gateName} maxLength={80} onChange={(e) => setGateName(e.target.value)} />
+            </label>
+            <label>Email
+              <input type="email" value={gateEmail} onChange={(e) => setGateEmail(e.target.value)} />
+            </label>
+            {gateError && <div className="sd-error" role="alert">{gateError}</div>}
+            <div className="sd-actions">
+              <button type="submit" className="primary">Post comment</button>
+              <button type="button" onClick={() => { setGate(null); setGateError(''); }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

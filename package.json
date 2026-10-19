@@ -2,9 +2,14 @@
   "name": "videoreview",
   "private": true,
   "scripts": {
-    "install:all": "npm install --prefix server && npm install --prefix client",
-    "dev:server": "npm run dev --prefix server",
-    "dev:client": "npm run dev --prefix client",
-    "build": "npm run build --prefix client"
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "next": "^16.4.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

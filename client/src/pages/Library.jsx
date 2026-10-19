@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 
-const STATUS_LABEL = { in_review: 'In review', approved: 'Approved', needs_changes: 'Needs changes' };
+const STATUS_LABEL = { needs_review: 'Needs Review', in_progress: 'In Progress', approved: 'Approved' };
 
 function fmtSize(n) {
   if (!n) return '';

@@ -36,7 +36,7 @@ router.post('/assets/:id/versions', (req, res, next) => {
       size: req.file.size,
       createdAt: now(),
     });
-    asset.status = 'in_review';
+    asset.status = 'needs_review';
     save();
     res.status(201).json(asset);
   });

@@ -11,10 +11,14 @@ const FILE = path.join(DATA_DIR, 'db.json');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-let state = { assets: [], comments: [], shares: [] };
+let state = { assets: [], comments: [], shares: [], activity: [] };
 if (fs.existsSync(FILE)) {
   try { state = { ...state, ...JSON.parse(fs.readFileSync(FILE, 'utf8')) }; } catch { /* start empty */ }
 }
+
+const STATUS_MIGRATION = { in_review: 'needs_review', needs_changes: 'in_progress' };
+for (const a of state.assets) if (STATUS_MIGRATION[a.status]) a.status = STATUS_MIGRATION[a.status];
+if (!Array.isArray(state.activity)) state.activity = [];
 
 export const db = state;
 export const newId = () => crypto.randomUUID();
